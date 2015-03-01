@@ -1,5 +1,5 @@
 import sbt._
-import Keys._
+import sbt.Keys._
 import sbtassembly.Plugin._
 import AssemblyKeys._
 
@@ -11,8 +11,12 @@ object BuildSettings {
     crossScalaVersions := Seq("2.10.2", "2.10.3", "2.10.4", "2.11.0", "2.11.1", "2.11.2", "2.11.3", "2.11.4", "2.11.5"),
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.sonatypeRepo("releases"),
+    resolvers += "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository",
     scalacOptions ++= Seq()
   )
+
+  val hiveVersion = "1.2.0-SNAPSHOT"
+  val hadoopVersion = "2.5.0"
 }
 
 object MyBuild extends Build {
@@ -23,7 +27,7 @@ object MyBuild extends Build {
     file("."),
     settings = buildSettings ++ Seq(
       run <<= run in Compile in core)
-  ) aggregate(macros, core)
+  ) aggregate(macros, core, hivehook)
 
   lazy val macros: Project = Project(
     "macros",
@@ -48,6 +52,17 @@ object MyBuild extends Build {
   lazy val core: Project = Project(
     "core",
     file("core"),
-    settings = buildSettings ++ assemblySettings
+    settings = buildSettings
+  ) dependsOn(macros)
+
+  lazy val hivehook: Project = Project(
+    "hivehook",
+    file("hivehook"),
+    settings = buildSettings ++ assemblySettings ++ Seq(
+      libraryDependencies := libraryDependencies.value ++ Seq(
+        "org.apache.hive" % "hive-exec" % BuildSettings.hiveVersion % "provided" ,
+        "org.apache.hadoop" % "hadoop-common" % BuildSettings.hadoopVersion % "provided"
+      )
+    )
   ) dependsOn(macros)
 }
