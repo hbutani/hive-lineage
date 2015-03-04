@@ -64,5 +64,5 @@ object MyBuild extends Build {
         "org.apache.hadoop" % "hadoop-common" % BuildSettings.hadoopVersion % "provided"
       )
     )
-  ) dependsOn(macros)
+  ) dependsOn(macros, core)
 }
