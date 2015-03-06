@@ -1,16 +1,14 @@
-package org.sparklinedata.hive.hook
+package org.sparklinedata.hive.hook.qinfo
 
 import java.io.Writer
 
 import org.apache.commons.io.output.StringBuilderWriter
-import org.apache.hadoop.hive.ql.exec.mr.{MapredLocalTask, MapRedTask}
-import org.apache.hadoop.hive.ql.plan.{MapredLocalWork, MapredWork}
+import org.apache.hadoop.hive.ql.QueryPlan
+import org.apache.hadoop.hive.ql.exec.{ConditionalTask, Operator, Task}
+import org.sparklinedata.hive.hook.{Node, PrintableNode}
 import org.sparklinedata.hive.metadata.Def
 
 import scala.collection.JavaConversions._
-
-import org.apache.hadoop.hive.ql.QueryPlan
-import org.apache.hadoop.hive.ql.exec.{ConditionalTask, Task, Operator}
 import scala.collection.immutable.Queue
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer

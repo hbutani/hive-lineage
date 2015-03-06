@@ -3,15 +3,16 @@ package org.sparklinedata.hive.hook
 import java.io.Writer
 
 import org.apache.hadoop.hive.ql.exec.{HashTableSinkOperator, FileSinkOperator, ReduceSinkOperator}
+import org.sparklinedata.hive.hook.qinfo._
 
-class QNode[T <: PrintableNode](val info : T) extends PrintableNode {
+class BldrNode[T <: PrintableNode](val info : T) extends PrintableNode {
 
   def id : String = info.id
 
-  private val childNodes = new collection.mutable.ArrayBuffer[QNode[_]]()
-  private val parentNodes = new collection.mutable.ArrayBuffer[QNode[_]]()
+  private val childNodes = new collection.mutable.ArrayBuffer[BldrNode[_]]()
+  private val parentNodes = new collection.mutable.ArrayBuffer[BldrNode[_]]()
 
-  def add(child : QNode[_]) :Unit = {
+  def add(child : BldrNode[_]) :Unit = {
     childNodes += child
     child.parentNodes += this
   }
@@ -21,20 +22,19 @@ class QNode[T <: PrintableNode](val info : T) extends PrintableNode {
   def printNode(prefix : String, out : Writer) : Unit = info.printNode(prefix, out)
 }
 
-class OperatorNode(info : OperatorInfo)  extends QNode[OperatorInfo](info)
-class QueryNode(info : QueryInfo)  extends QNode[QueryInfo](info)
+class OperatorBldrNode(info : OperatorInfo)  extends BldrNode[OperatorInfo](info)
+class QueryBldrNode(info : QueryInfo)  extends BldrNode[QueryInfo](info)
 
+class OperatorGraphBuilder private (val qInfo : QueryInfo) {
 
-class BuildOperatorGraph private (val qInfo : QueryInfo) {
+  var rootNode : QueryBldrNode = _
 
-  var rootNode : QueryNode = _
-
-  val operatorNodeStack = scala.collection.mutable.Stack[QNode[_]]()
-  val sinkOperatorNodeStack = scala.collection.mutable.Stack[OperatorNode]()
+  val operatorNodeStack = scala.collection.mutable.Stack[BldrNode[_]]()
+  val sinkOperatorNodeStack = scala.collection.mutable.Stack[OperatorBldrNode]()
   val taskStack = scala.collection.mutable.Stack[TaskInfo]()
-  val oNodes = scala.collection.mutable.Map[String,OperatorNode]()
+  val oNodes = scala.collection.mutable.Map[String,OperatorBldrNode]()
 
-  def isFirstOperatorOfTask(opNd : OperatorNode) : Boolean = {
+  def isFirstOperatorOfTask(opNd : OperatorBldrNode) : Boolean = {
     taskStack.top match {
       case mr : MapRedTaskInfo => {
         mr.mapWork.getAliasToWork.values().contains(opNd.info.op)
@@ -46,7 +46,7 @@ class BuildOperatorGraph private (val qInfo : QueryInfo) {
     }
   }
 
-  def connectToParent2(opNd : OperatorNode) : Unit = {
+  def connectToParent2(opNd : OperatorBldrNode) : Unit = {
     val parentOpExists = !(operatorNodeStack.top eq rootNode)
     val currTask = taskStack.top
     val currTaskIsRoot = qInfo.startingTasks.contains(currTask.id)
@@ -79,7 +79,7 @@ class BuildOperatorGraph private (val qInfo : QueryInfo) {
     }
   }
 
-  def _connectToParent(opNd : OperatorNode) : Unit = {
+  def _connectToParent(opNd : OperatorBldrNode) : Unit = {
     if ( !(operatorNodeStack.top eq rootNode) ) {
       val p = operatorNodeStack.top
       p.add(opNd)
@@ -100,12 +100,12 @@ class BuildOperatorGraph private (val qInfo : QueryInfo) {
 
   def preVisit(nd: Node) : Unit = nd match {
     case qI : QueryInfo => {
-      val opNode = new QueryNode(qI)
+      val opNode = new QueryBldrNode(qI)
       operatorNodeStack.push(opNode)
       rootNode = opNode
     }
     case op : OperatorInfo => {
-      val opNode = oNodes.getOrElse(op.id, new OperatorNode(op))
+      val opNode = oNodes.getOrElse(op.id, new OperatorBldrNode(op))
       connectToParent2(opNode)
       if (oNodes.contains(op.id)) return
       oNodes += (op.id -> opNode)
@@ -130,10 +130,10 @@ class BuildOperatorGraph private (val qInfo : QueryInfo) {
 
 }
 
-object BuildOperatorGraph  {
+object OperatorGraphBuilder  {
 
-  def apply(qInfo : QueryInfo) : QueryNode = {
-    val b = new BuildOperatorGraph(qInfo)
+  def apply(qInfo : QueryInfo) : QueryBldrNode = {
+    val b = new OperatorGraphBuilder(qInfo)
     val visited : scala.collection.mutable.Set[String] = scala.collection.mutable.Set()
     qInfo.traverse(b.preVisit, b.postVisit)(visited)
     b.rootNode

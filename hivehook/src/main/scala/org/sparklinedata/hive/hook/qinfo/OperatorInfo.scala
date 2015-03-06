@@ -1,12 +1,13 @@
-package org.sparklinedata.hive.hook
+package org.sparklinedata.hive.hook.qinfo
 
 import java.io.Writer
 
+import org.apache.hadoop.hive.ql.exec.{Operator, TableScanOperator}
 import org.apache.hadoop.hive.ql.plan.TableScanDesc
+import org.sparklinedata.hive.hook.PrintableNode
 import org.sparklinedata.hive.metadata.{PartitionDef, TableDef}
 
 import scala.collection.JavaConversions._
-import org.apache.hadoop.hive.ql.exec.{Operator, TableScanOperator}
 
 class OperatorInfo(val qInfo : QueryInfo, tInfo: TaskInfo, val op : Operator[_]) extends PrintableNode {
 

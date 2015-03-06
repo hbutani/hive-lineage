@@ -1,15 +1,15 @@
-package org.sparklinedata.hive.hook
+package org.sparklinedata.hive.hook.qinfo
 
 import java.io.Writer
 
-import org.apache.hadoop.hive.ql.exec.mr.{MapredLocalTask, MapRedTask}
+import org.apache.hadoop.hive.ql.exec.mr.{MapRedTask, MapredLocalTask}
+import org.apache.hadoop.hive.ql.exec.{ConditionalTask, Operator, Task}
 import org.apache.hadoop.hive.ql.plan.{MapredLocalWork, MapredWork}
-
-import scala.collection.JavaConversions._
-import org.apache.hadoop.hive.ql.exec.{TableScanOperator, ConditionalTask, Task, Operator}
-
+import org.sparklinedata.hive.hook.HivePlanUtils._
+import org.sparklinedata.hive.hook.PrintableNode
 import org.sparklinedata.hive.metadata.Def
 
+import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
 class TaskInfo(val qInfo : QueryInfo, val task : Task[_]) extends PrintableNode {
@@ -104,7 +104,6 @@ class MapRedTaskInfo(qInfo : QueryInfo, task : MapRedTask) extends TaskInfo(qInf
   }
 
   override def terminalOperators : Option[Set[String] ] = {
-    import HivePlanUtils._
     val s = if (task.getWork.getReduceWork != null ) {
       terminalOps(task.getWork.getReduceWork.getReducer)
     } else {
@@ -124,7 +123,6 @@ class MapRedLocalTaskInfo(qInfo : QueryInfo, task : MapredLocalTask) extends Tas
   val mapWork : MapredLocalWork = task.getWork
 
   override def terminalOperators : Option[Set[String] ] = {
-    import HivePlanUtils._
     val s = {
       mapWork.getAliasToWork.values().map(terminalOps(_)).reduce(_ ++ _)
     }

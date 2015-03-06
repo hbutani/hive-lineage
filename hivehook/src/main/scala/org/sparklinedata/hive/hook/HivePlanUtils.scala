@@ -6,6 +6,7 @@ import org.apache.commons.io.{IOUtils, FileUtils}
 import org.apache.hadoop.hive.ql.QueryPlan
 import org.apache.hadoop.hive.ql.exec.{Utilities, Operator}
 import org.sparklinedata.hive.hook.ConvertHelper._
+import org.sparklinedata.hive.hook.qinfo.QueryInfo
 import org.sparklinedata.hive.metadata._
 
 import scala.collection.JavaConversions._
@@ -40,7 +41,7 @@ object HivePlanUtils {
     Utilities.deserializeObject(readStreamIntoString(ins), classOf[QueryPlan])
   }
 
-  def querPlanToOperatorGraph(qP : QueryPlan) : QueryNode = {
+  def querPlanToOperatorGraph(qP : QueryPlan) : QueryBldrNode = {
 
     implicit val model = new Model
     var locationMap : Map[String, Def] = Map()
@@ -65,6 +66,6 @@ object HivePlanUtils {
       addLocation(d)
     }
     val qInfo = new QueryInfo(locationMap, qP)
-    BuildOperatorGraph(qInfo)
+    OperatorGraphBuilder(qInfo)
   }
 }

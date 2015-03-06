@@ -7,6 +7,7 @@ import org.apache.hadoop.hive.ql.session.SessionState
 import org.apache.hadoop.security.UserGroupInformation
 
 import org.apache.hadoop.hive.ql.session.SessionState.LogHelper
+import org.sparklinedata.hive.hook.qinfo.QueryInfo
 import org.sparklinedata.hive.metadata._
 
 class PostExecHook  extends ExecuteWithHookContext {
@@ -57,7 +58,7 @@ class PostExecHook  extends ExecuteWithHookContext {
       addLocation(d)
     }
     val qInfo = new QueryInfo(locationMap, qP)
-    val opNode = BuildOperatorGraph(qInfo)
+    val opNode = OperatorGraphBuilder(qInfo)
 
     if (ss != null) {
       console.printError("Lineage Hook: query: " + ss.getCmd().trim())
