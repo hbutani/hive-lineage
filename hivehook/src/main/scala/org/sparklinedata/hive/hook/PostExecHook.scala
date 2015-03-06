@@ -57,12 +57,14 @@ class PostExecHook  extends ExecuteWithHookContext {
       addLocation(d)
     }
     val qInfo = new QueryInfo(locationMap, qP)
+    val opNode = BuildOperatorGraph(qInfo)
 
     if (ss != null) {
       console.printError("Lineage Hook: query: " + ss.getCmd().trim())
       console.printError("Lineage Hook: type: " + ss.getCommandType())
       //console.printError("Lineage Hook: model: " + model)
-      console.printError(s"Query Plan: \n$qInfo")
+      console.printError(s"Query Plan: \n${qInfo.toStringTree}")
+      console.printError(s"Query Node Graph: \n${opNode.toStringTree}")
     }
 
   }

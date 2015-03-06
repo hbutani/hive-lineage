@@ -10,22 +10,17 @@ import org.apache.hadoop.hive.ql.exec.{TableScanOperator, ConditionalTask, Task,
 
 import org.sparklinedata.hive.metadata.Def
 
-class TaskInfo(qInfo : QueryInfo, val task : Task[_]) extends Node {
+import scala.collection.mutable.ArrayBuffer
+
+class TaskInfo(val qInfo : QueryInfo, val task : Task[_]) extends PrintableNode {
 
   def id = task.getId
   def work = task.getWork
 
-  def printGraph(prefix : String, out : Writer)
-                (implicit queryInfo : QueryInfo, visited : scala.collection.mutable.Set[String]) : Unit = {
-    if (visited.contains(id)) return
-    visited.add(id)
+  def children = childOperatorNames.map(qInfo(_)) ++ childTaskNames.map(qInfo(_))
+
+  def printNode(prefix : String, out : Writer) : Unit = {
     out.write(s"$prefix ${task.getClass.getSimpleName}[$id]\n")
-    childOperatorNames.foreach { c =>
-      queryInfo(c).printGraph(prefix + "  ", out)
-    }
-    childTaskNames.foreach { c =>
-      queryInfo(c).printGraph(prefix + "  ", out)
-    }
   }
 
   lazy val parentTasks : Seq[String] = {
@@ -51,6 +46,8 @@ class TaskInfo(qInfo : QueryInfo, val task : Task[_]) extends Node {
   def childOperators : Seq[Operator[_]] = Seq()
 
   lazy val childOperatorNames : Seq[String] = childOperators.map(_.getOperatorId)
+
+  def terminalOperators : Option[Set[String] ] = None
 }
 
 object TaskInfo {
@@ -77,15 +74,44 @@ class MapRedTaskInfo(qInfo : QueryInfo, task : MapRedTask) extends TaskInfo(qInf
     if ( redWrk != null ) ops :+ redWrk.getReducer  else ops
   }
 
-  val pathToDef : Map[String, Def] = task.getWork.getMapWork.getPathToPartitionInfo.entrySet().map{ e =>
+  val mapWork = task.getWork.getMapWork
+  val pathToDef : Map[String, Def] = mapWork.getPathToPartitionInfo.entrySet().map{ e =>
     val path = e.getKey
     val pDesc = e.getValue
-    val location = pDesc.getProperties.getProperty("location", "")
+    val location = pDesc.getProperties.getProperty("location", path)
     val df = qInfo.locationMap.getOrElse(location, new TempFileDef(location))
-    (location -> df)
+    (path -> df)
   }.toMap
 
-  // todo walk pathToDef, build opId -> [Def]
+  lazy val opToInputDefs  = {
+    val opInputPairs = for {
+      (path, df) <- pathToDef
+      if mapWork.getPathToAliases.containsKey(path)
+      alias <- mapWork.getPathToAliases.get(path)
+      op = mapWork.getAliasToWork.get(alias)
+    } yield (df, op)
+
+    val m = scala.collection.mutable.Map[Operator[_], ArrayBuffer[Def]]()
+
+    opInputPairs.foreach { t =>
+      val df = t._1
+      val op = t._2
+      if (!m.containsKey(op)) m += ((op, ArrayBuffer()))
+      val b = m(op)
+      b += df
+    }
+    m.toMap
+  }
+
+  override def terminalOperators : Option[Set[String] ] = {
+    import HivePlanUtils._
+    val s = if (task.getWork.getReduceWork != null ) {
+      terminalOps(task.getWork.getReduceWork.getReducer)
+    } else {
+      mapWork.getAliasToWork.values().map(terminalOps(_)).reduce(_ ++ _)
+    }
+    Some(s)
+  }
 }
 
 class MapRedLocalTaskInfo(qInfo : QueryInfo, task : MapredLocalTask) extends TaskInfo(qInfo, task) {
@@ -93,6 +119,16 @@ class MapRedLocalTaskInfo(qInfo : QueryInfo, task : MapredLocalTask) extends Tas
   override def childOperators : Seq[Operator[_]] = {
     val w : MapredLocalWork = task.getWork
     w.getAliasToWork.values().toSeq
+  }
+
+  val mapWork : MapredLocalWork = task.getWork
+
+  override def terminalOperators : Option[Set[String] ] = {
+    import HivePlanUtils._
+    val s = {
+      mapWork.getAliasToWork.values().map(terminalOps(_)).reduce(_ ++ _)
+    }
+    Some(s)
   }
 
 }

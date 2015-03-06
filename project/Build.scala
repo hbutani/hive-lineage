@@ -60,8 +60,11 @@ object MyBuild extends Build {
     file("hivehook"),
     settings = buildSettings ++ assemblySettings ++ Seq(
       libraryDependencies := libraryDependencies.value ++ Seq(
-        "org.apache.hive" % "hive-exec" % BuildSettings.hiveVersion % "provided" ,
-        "org.apache.hadoop" % "hadoop-common" % BuildSettings.hadoopVersion % "provided"
+        "org.apache.hive" % "hive-exec" % BuildSettings.hiveVersion % "provided",
+        "org.apache.hadoop" % "hadoop-common" % BuildSettings.hadoopVersion % "provided",
+        //"org.apache.hadoop" % "hadoop-client" % BuildSettings.hadoopVersion % "test",
+        "commons-io" % "commons-io" % "2.4",
+        "junit" % "junit" % "4.10" % "test"
       )
     )
   ) dependsOn(macros, core)

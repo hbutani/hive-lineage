@@ -12,9 +12,11 @@ import scala.collection.JavaConversions._
 import org.apache.hadoop.hive.ql.QueryPlan
 import org.apache.hadoop.hive.ql.exec.{ConditionalTask, Task, Operator}
 import scala.collection.immutable.Queue
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
 
-class QueryInfo(val locationMap : Map[String, Def], val queryPlan : QueryPlan) extends Node {
+class QueryInfo(val locationMap : Map[String, Def], val queryPlan : QueryPlan) extends PrintableNode {
 
   qInfo =>
 
@@ -25,28 +27,34 @@ class QueryInfo(val locationMap : Map[String, Def], val queryPlan : QueryPlan) e
 
   lazy val rootTasks = queryPlan.getRootTasks.map(_.getId)
 
+  lazy val startingTasks  : Set[String] = {
+    val l = ArrayBuffer(rootTasks:_*)
+    val q = mutable.Queue[Task[_]](l.map(taskMap(_).task).filter(_.isInstanceOf[ConditionalTask]):_*)
+    while(!q.isEmpty) {
+      val c = q.dequeue().asInstanceOf[ConditionalTask]
+      c.getListTasks.foreach { t =>
+        l += t.getId
+        if (t.isInstanceOf[ConditionalTask]) q.enqueue(t)
+      }
+    }
+    l.toSet
+  }
+
   def apply(s : String) : Node = {
     if (taskMap.contains(s)) taskMap(s) else operatorMap(s)
   }
 
-  def printGraph(prefix : String, out : Writer)
-                (implicit queryInfo : QueryInfo, visited : scala.collection.mutable.Set[String]) : Unit = {
+  def children = rootTasks.map(apply(_))
+
+  def printNode(prefix : String, out : Writer) : Unit = {
     out.write(s"$prefix QueryPlan[$id]\n")
-    rootTasks.foreach { c =>
-      queryInfo(c).printGraph(prefix + "  ", out)
-    }
   }
 
-  override  def toString() : String = {
-    try {
-      throw new NullPointerException
-    } catch {
-      case _ : NullPointerException => ()
-    }
-
+  def operatorGraphStr() : String = {
+    _throwNPE
     val out = new StringBuilderWriter()
     val visited : scala.collection.mutable.Set[String] = scala.collection.mutable.Set()
-    printGraph("", out)(this, visited)
+    printGraph(_.isInstanceOf[OperatorInfo], "", out)(visited)
     return out.toString
   }
 
