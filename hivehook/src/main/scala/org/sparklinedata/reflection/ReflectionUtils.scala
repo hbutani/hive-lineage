@@ -20,8 +20,7 @@ object ReflectionUtils {
     case _ => false
   }
 
-  def construct[T: ru.TypeTag](args : Any*) : T = {
-    val typ = ru.typeOf[T]
+  def construct(typ : ru.Type, args : Any*) : Any = {
     val classSymbol = typ.typeSymbol.asClass
     val runtimeMirror = ru.runtimeMirror(getClass.getClassLoader)
     val classMirror = runtimeMirror.reflectClass(classSymbol)
@@ -42,14 +41,14 @@ object ReflectionUtils {
             val argT = t._2
             val nm = p.name
             val pTyp = p.typeSignature
-            if ( !((pTyp weak_<:< argT) /*|| primitiveMatch(pTyp, argT)*/) ) {
+            if ( !((argT weak_<:< pTyp) /*|| primitiveMatch(pTyp, argT)*/) ) {
               noMatch = true
             }
           }
         }
         if (!noMatch ) {
           val constructorMirror = classMirror.reflectConstructor(ctor)
-          return constructorMirror(args:_*).asInstanceOf[T]
+          return constructorMirror(args:_*)
         }
       }
     }

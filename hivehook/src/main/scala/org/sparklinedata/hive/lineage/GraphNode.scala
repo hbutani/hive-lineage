@@ -2,9 +2,8 @@ package org.sparklinedata.hive.lineage
 
 import java.io.Writer
 
-import errors._
 import org.apache.commons.io.output.StringBuilderWriter
-import org.sparklinedata.reflection.ReflectionUtils
+import org.sparklinedata.hive.lineage.errors._
 
 abstract class GraphNode {
 
@@ -28,7 +27,11 @@ abstract class GraphNode {
   }
 
   def makeCopy(args: Array[AnyRef]): GraphNode = attachTree(this, "makeCopy") {
-    ReflectionUtils.construct[this.type](args:_*)
+    //val typ = ReflectionUtils.getType(this)
+    //ReflectionUtils.construct(typ, args:_*).asInstanceOf[GraphNode]
+
+    val defaultCtor = getClass.getConstructors.find(_.getParameterTypes.size != 0).head
+    defaultCtor.newInstance(args: _*).asInstanceOf[this.type]
   }
 
   def transformUp(rule: PartialFunction[GraphNode, GraphNode]): GraphNode = {

@@ -48,14 +48,12 @@ class OperatorGraphBuilder private (val qInfo : QueryInfo) {
     }
   }
 
-  def connectToParent2(opNd : OperatorBldrNode) : Unit = {
+  def connectToParent(opNd : OperatorBldrNode) : Unit = {
     val parentOpExists = !(operatorNodeStack.top eq rootNode)
     val currTask = taskStack.top
     val currTaskIsRoot = qInfo.startingTasks.contains(currTask.id)
     val isOpFirst = isFirstOperatorOfTask(opNd)
     val canConnectToSink = !sinkOperatorNodeStack.isEmpty
-
-    opNd._throwNPE
 
     (parentOpExists, currTaskIsRoot, isOpFirst, canConnectToSink) match {
       case (false, true, true, _) => { // connect a RootNode Op to the QueryNode
@@ -81,25 +79,6 @@ class OperatorGraphBuilder private (val qInfo : QueryInfo) {
     }
   }
 
-  def _connectToParent(opNd : OperatorBldrNode) : Unit = {
-    if ( !(operatorNodeStack.top eq rootNode) ) {
-      val p = operatorNodeStack.top
-      p.add(opNd)
-    }else if ( !sinkOperatorNodeStack.isEmpty) {
-      sinkOperatorNodeStack.reverse.foreach { p =>
-        p.add(opNd)
-      }
-      sinkOperatorNodeStack.clear()
-    }  else if ( isFirstOperatorOfTask(opNd) ) {
-      val p = operatorNodeStack.top
-      p.add(opNd)
-    } else {
-      //throw new InternalError(s"Node w/o a Parent ${opNd}")
-      val p = operatorNodeStack.top
-      p.add(opNd)
-    }
-  }
-
   def preVisit(nd: Node) : Unit = nd match {
     case qI : QueryInfo => {
       val opNode = new QueryBldrNode(qI)
@@ -108,7 +87,7 @@ class OperatorGraphBuilder private (val qInfo : QueryInfo) {
     }
     case op : OperatorInfo => {
       val opNode = oNodes.getOrElse(op.id, new OperatorBldrNode(op))
-      connectToParent2(opNode)
+      connectToParent(opNode)
       if (oNodes.contains(op.id)) return
       oNodes += (op.id -> opNode)
       operatorNodeStack.push(opNode)
