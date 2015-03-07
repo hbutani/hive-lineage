@@ -53,16 +53,16 @@ class TableScanOperatorInfo(qInfo : QueryInfo, tInfo: TaskInfo, op : TableScanOp
 
   def conf : TableScanDesc = op.getConf
   def alias = conf.getAlias
-  private lazy val aliasStr = " alias=" + alias
+  private def aliasStr(p : String) = if (alias != null )s"\n$p alias=$alias" else ""
 
   lazy val filterExpr : String = {
     if (conf.getFilterExpr != null) conf.getFilterExpr.getExprString else null
   }
 
-  private lazy val filterExprStr = if (filterExpr != null ) s" filterExpr=$filterExpr" else ""
+  private def filterExprStr(p : String) = if (filterExpr != null ) s"\n$p filterExpr=$filterExpr" else ""
 
   val projectedColumns = conf.getNeededColumns
-  private lazy val projectColumnsStr = " columns=" + projectedColumns.mkString("[", ",", "]")
+  private def projectColumnsStr(p : String) = s"\n$p columns=${projectedColumns.mkString("[", ",", "]")}"
 
   lazy val extractInputs : (TempFileDef, TableDef, Seq[PartitionDef]) = tInfo match {
     case mrt : MapRedTaskInfo => {
@@ -85,12 +85,13 @@ class TableScanOperatorInfo(qInfo : QueryInfo, tInfo: TaskInfo, op : TableScanOp
   val  table =  extractInputs._2
   val partitions = extractInputs._3
 
-  private lazy val tempFileStr = if (tempFile != null ) " tempFile=" + tempFile.fqn else ""
-  private lazy val tableStr = if (table != null ) " table=" + table.fqn else ""
-  private lazy val parttionStr =
-    if (partitions.size > 0 ) " partitions=" + partitions.map(_.fqn).mkString("[", ",", "]") else ""
+  private def tempFileStr(p : String) = if (tempFile != null ) s"\n$p tempFile=${tempFile.fqn}" else ""
+  private def tableStr(p : String) = if (table != null ) s"\n$p table=${table.fqn}" else ""
+  private def parttionStr(p : String) =
+    if (partitions.size > 0 ) s"\n$p partitions=${partitions.map(_.fqn).mkString("[", ",", "]")}" else ""
 
   override def operatorDetails(prefix : String) : String = {
-    s"(${tempFileStr}${tableStr}${parttionStr}${aliasStr}${projectColumnsStr}${filterExprStr})"
+    val p = prefix + "    "
+    s"(${tempFileStr(p)}${tableStr(p)}${parttionStr(p)}${aliasStr(p)}${projectColumnsStr(p)}${filterExprStr(p)}\n$p)"
   }
 }
