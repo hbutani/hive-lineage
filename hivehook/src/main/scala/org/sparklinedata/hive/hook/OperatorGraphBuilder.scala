@@ -2,8 +2,9 @@ package org.sparklinedata.hive.hook
 
 import java.io.Writer
 
-import org.apache.hadoop.hive.ql.exec.{HashTableSinkOperator, FileSinkOperator, ReduceSinkOperator}
+import org.apache.hadoop.hive.ql.exec.{FileSinkOperator, HashTableSinkOperator, ReduceSinkOperator}
 import org.sparklinedata.hive.hook.qinfo._
+import org.sparklinedata.hive.lineage.{OperatorNode, PrintableGraphNode, QueryNode}
 
 class BldrNode[T <: PrintableNode](val info : T) extends PrintableNode {
 
@@ -18,6 +19,7 @@ class BldrNode[T <: PrintableNode](val info : T) extends PrintableNode {
   }
 
   def children = childNodes.toSeq
+  def parents = parentNodes.toSeq
 
   def printNode(prefix : String, out : Writer) : Unit = info.printNode(prefix, out)
 }
@@ -132,11 +134,29 @@ class OperatorGraphBuilder private (val qInfo : QueryInfo) {
 
 object OperatorGraphBuilder  {
 
-  def apply(qInfo : QueryInfo) : QueryBldrNode = {
+  private def convert(bNd : QueryBldrNode) : PrintableGraphNode = {
+    val bldrNdToOpNode = scala.collection.mutable.Map[String, PrintableGraphNode]()
+
+    def pre(bldrNd: Node) : Unit = ()
+    def post(bldrNd : Node) :Unit = {
+      val children = bldrNd.children.map(c => bldrNdToOpNode(c.id))
+      val nd = bldrNd match {
+        case op : OperatorBldrNode => OperatorNode(op.info, children)
+        case q : QueryBldrNode => QueryNode(q.info, children)
+      }
+      bldrNdToOpNode += (bldrNd.id -> nd)
+    }
+
+    bNd.traverse(pre, post)(scala.collection.mutable.Set())
+    return bldrNdToOpNode(bNd.id)
+
+  }
+
+  def apply(qInfo : QueryInfo) : PrintableGraphNode = {
     val b = new OperatorGraphBuilder(qInfo)
     val visited : scala.collection.mutable.Set[String] = scala.collection.mutable.Set()
     qInfo.traverse(b.preVisit, b.postVisit)(visited)
-    b.rootNode
+    convert(b.rootNode)
   }
 
 }

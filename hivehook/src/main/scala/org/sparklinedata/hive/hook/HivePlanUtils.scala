@@ -1,12 +1,12 @@
 package org.sparklinedata.hive.hook
 
-import java.io.{StringWriter, InputStream}
+import java.io.{InputStream, StringWriter}
 
-import org.apache.commons.io.{IOUtils, FileUtils}
+import org.apache.commons.io.IOUtils
 import org.apache.hadoop.hive.ql.QueryPlan
-import org.apache.hadoop.hive.ql.exec.{Utilities, Operator}
-import org.sparklinedata.hive.hook.ConvertHelper._
+import org.apache.hadoop.hive.ql.exec.{Operator, Utilities}
 import org.sparklinedata.hive.hook.qinfo.QueryInfo
+import org.sparklinedata.hive.lineage.PrintableGraphNode
 import org.sparklinedata.hive.metadata._
 
 import scala.collection.JavaConversions._
@@ -41,7 +41,7 @@ object HivePlanUtils {
     Utilities.deserializeObject(readStreamIntoString(ins), classOf[QueryPlan])
   }
 
-  def querPlanToOperatorGraph(qP : QueryPlan) : QueryBldrNode = {
+  def querPlanToOperatorGraph(qP : QueryPlan) : PrintableGraphNode = {
 
     implicit val model = new Model
     var locationMap : Map[String, Def] = Map()
@@ -55,7 +55,7 @@ object HivePlanUtils {
     val inputs = qP.getInputs
     val outputs = qP.getOutputs
 
-    import ConvertHelper._
+    import org.sparklinedata.hive.hook.ConvertHelper._
     inputs.foreach { e =>
       val d = convert(e)
       addLocation(d)
