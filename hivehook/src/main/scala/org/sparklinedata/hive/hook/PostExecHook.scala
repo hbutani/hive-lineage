@@ -9,7 +9,7 @@ import org.apache.hadoop.security.UserGroupInformation
 import org.apache.hadoop.hive.ql.session.SessionState.LogHelper
 import org.sparklinedata.hive.hook.qinfo.QueryInfo
 import org.sparklinedata.hive.lineage.PrintableGraphNode
-import org.sparklinedata.hive.lineage.transform.rules.AttachHashSinkToMapJoinRule
+import org.sparklinedata.hive.lineage.transform.rules.{RemoveMapSideGroupByRule, RemoveIntermediateTableScansRule, RemoveSinkOperatorsRule, AttachHashSinkToMapJoinRule}
 import org.sparklinedata.hive.metadata._
 
 class PostExecHook  extends ExecuteWithHookContext {
@@ -63,8 +63,14 @@ class PostExecHook  extends ExecuteWithHookContext {
     var opNode = OperatorGraphBuilder(qInfo)
 
     val rule1 = new AttachHashSinkToMapJoinRule
+    val rule2 = new RemoveSinkOperatorsRule
+    val rule3 = new RemoveIntermediateTableScansRule
+    val rule4 = new RemoveMapSideGroupByRule
 
     opNode = opNode.transformUp(rule1.apply).asInstanceOf[PrintableGraphNode]
+    opNode = opNode.transformUp(rule2.apply).asInstanceOf[PrintableGraphNode]
+    opNode = opNode.transformUp(rule3.apply).asInstanceOf[PrintableGraphNode]
+    opNode = opNode.transformUp(rule4.apply).asInstanceOf[PrintableGraphNode]
 
     if (ss != null) {
       console.printError("Lineage Hook: query: " + ss.getCmd().trim())
