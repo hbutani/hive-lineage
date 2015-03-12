@@ -17,13 +17,13 @@ class OperatorInfo(val qInfo : QueryInfo, tInfo: TaskInfo, val op : Operator[_])
   def children = childOperators.map(qInfo(_))
 
   def printNode(prefix : String, out : Writer) : Unit = {
-    out.write(s"$prefix ${op.getClass.getSimpleName}[$id]${operatorDetails(prefix)}\n")
+    out.write(s"$prefix ${op.getClass.getSimpleName}[$id] schema=${schemaMapping} ${operatorDetails(prefix)}\n")
   }
 
   lazy val parentOperators : Seq[String] = {
     val parents = op.getParentOperators
     if ( parents != null ) {
-      parents.map {p => p.getOperatorId }
+      parents.filter(_ != null).map {p => p.getOperatorId }
     } else {
       Seq()
     }
@@ -39,6 +39,10 @@ class OperatorInfo(val qInfo : QueryInfo, tInfo: TaskInfo, val op : Operator[_])
   }
 
   def operatorDetails(prefix : String) : String = ""
+
+  def rowSchema = op.getSchema
+
+  lazy val schemaMapping : SchemaMapping = SchemaMapping(this)
 
 }
 
