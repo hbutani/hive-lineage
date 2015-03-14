@@ -8,15 +8,6 @@ import scala.collection.mutable.ArrayBuffer
 
 class AttachHashSinkToMapJoinRule {
 
-  // for debugging in java
-  def _throwNPE = {
-    try {
-      throw new NullPointerException
-    } catch {
-      case _ : NullPointerException => ()
-    }
-  }
-
   val mapJoinOpStack = scala.collection.mutable.Stack[OperatorNode]()
   val tableScansToPromote = ArrayBuffer[GraphNode]()
 
@@ -24,7 +15,7 @@ class AttachHashSinkToMapJoinRule {
     case q : QueryNode => {
       if (!tableScansToPromote.isEmpty) {
         val children = q.children ++ tableScansToPromote
-        new QueryNode(q.info, children)
+        QueryNode(q.info, children)
       } else {
         q
       }
@@ -38,7 +29,7 @@ class AttachHashSinkToMapJoinRule {
       //val htsNewChildren = htsOp.children.map(_.transformUp(removeMapJoin(mjOp.id)))
       val htsNewChildren = htsOp.children
       tableScansToPromote ++= htsNewChildren
-      new OperatorNode(htsOp.info, Seq(mjOp))
+      OperatorNode(htsOp.info, Seq(mjOp))
     }
   }
 
@@ -49,7 +40,7 @@ class AttachHashSinkToMapJoinRule {
       if (nwChildren.size == op.children.size) {
         op
       } else {
-        new OperatorNode(op.info, nwChildren)
+        OperatorNode(op.info, nwChildren)
       }
     }
   }

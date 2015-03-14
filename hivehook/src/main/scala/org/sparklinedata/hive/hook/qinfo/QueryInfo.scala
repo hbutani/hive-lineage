@@ -49,7 +49,6 @@ class QueryInfo(val locationMap : Map[String, Def], val queryPlan : QueryPlan) e
   }
 
   def operatorGraphStr() : String = {
-    _throwNPE
     val out = new StringBuilderWriter()
     val visited : scala.collection.mutable.Set[String] = scala.collection.mutable.Set()
     printGraph(_.isInstanceOf[OperatorInfo], "", out)(visited)

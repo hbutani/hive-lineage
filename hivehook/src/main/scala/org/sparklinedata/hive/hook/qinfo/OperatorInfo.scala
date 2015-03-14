@@ -17,7 +17,7 @@ class OperatorInfo(val qInfo : QueryInfo, tInfo: TaskInfo, val op : Operator[_])
   def children = childOperators.map(qInfo(_))
 
   def printNode(prefix : String, out : Writer) : Unit = {
-    out.write(s"$prefix ${op.getClass.getSimpleName}[$id] schema=${schemaMapping} ${operatorDetails(prefix)}\n")
+    out.write(s"$prefix ${op.getClass.getSimpleName}[$id]${operatorDetails(prefix)}\n")
   }
 
   lazy val parentOperators : Seq[String] = {
@@ -28,6 +28,7 @@ class OperatorInfo(val qInfo : QueryInfo, tInfo: TaskInfo, val op : Operator[_])
       Seq()
     }
   }
+
 
   lazy val childOperators : Seq[String] = {
     val children = op.getChildOperators
@@ -41,9 +42,6 @@ class OperatorInfo(val qInfo : QueryInfo, tInfo: TaskInfo, val op : Operator[_])
   def operatorDetails(prefix : String) : String = ""
 
   def rowSchema = op.getSchema
-
-  lazy val schemaMapping : SchemaMapping = SchemaMapping(this)
-
 }
 
 object OperatorInfo {
@@ -183,7 +181,6 @@ class JoinOperatorInfo(qInfo : QueryInfo, tInfo : TaskInfo, op : CommonJoinOpera
   }
 
   override def operatorDetails(prefix : String) : String = {
-    _throwNPE
     s"($joinStr)"
   }
 

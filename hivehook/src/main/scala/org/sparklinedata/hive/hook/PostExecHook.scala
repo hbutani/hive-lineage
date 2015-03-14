@@ -62,12 +62,10 @@ class PostExecHook  extends ExecuteWithHookContext {
     val qInfo = new QueryInfo(locationMap, qP)
     var opNode = OperatorGraphBuilder(qInfo)
 
-    val rule1 = new AttachHashSinkToMapJoinRule
     val rule2 = new RemoveSinkOperatorsRule
     val rule3 = new RemoveIntermediateTableScansRule
     val rule4 = new RemoveMapSideGroupByRule
 
-    opNode = opNode.transformUp(rule1.apply).asInstanceOf[PrintableGraphNode]
     opNode = opNode.transformUp(rule2.apply).asInstanceOf[PrintableGraphNode]
     opNode = opNode.transformUp(rule3.apply).asInstanceOf[PrintableGraphNode]
     opNode = opNode.transformUp(rule4.apply).asInstanceOf[PrintableGraphNode]

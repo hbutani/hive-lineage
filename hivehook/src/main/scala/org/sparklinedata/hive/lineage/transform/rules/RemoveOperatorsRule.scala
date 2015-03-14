@@ -27,7 +27,7 @@ abstract class RemoveOperatorsRule {
           newChildren += c.asInstanceOf[OperatorNode]
         }
       }
-      if ( fnd ) new OperatorNode(op.info, newChildren.toSeq) else op
+      if ( fnd ) OperatorNode(op.info, newChildren.toSeq,op.schemaMapping) else op
     }
   }
 

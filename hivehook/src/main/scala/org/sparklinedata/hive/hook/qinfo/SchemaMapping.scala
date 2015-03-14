@@ -3,6 +3,7 @@ package org.sparklinedata.hive.hook.qinfo
 import org.apache.hadoop.hive.ql.plan._
 import org.apache.hadoop.hive.ql.exec._
 import org.apache.hadoop.hive.ql.plan.{TableScanDesc, FilterDesc, JoinDesc, JoinCondDesc, SelectDesc, GroupByDesc}
+import org.sparklinedata.hive.lineage.OperatorNode
 
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
@@ -71,14 +72,14 @@ case class SchemaMapping(columns : Map[String, Column]) {
 }
 
 object SchemaMapping {
-  def apply(op : OperatorInfo) : SchemaMapping = op.op match {
+  def apply(op : OperatorNode) : SchemaMapping = op.op match {
     case ts : TableScanOperator => {
       SchemaMapping(op.rowSchema.getSignature.map { ci =>
         (ci.getInternalName, Column(ci.getTabAlias, ci.getAlias))
       }.toMap)
     }
     case rs : ReduceSinkOperator => {
-      val inputSchema = op.qInfo(op.parentOperators(0)).asInstanceOf[OperatorInfo].schemaMapping
+      val inputSchema = op.parents(0).schemaMapping
       val conf = rs.getConf
       val keyColumns = conf.getKeyCols.map { k =>
         inputSchema.columns(k.asInstanceOf[ExprNodeColumnDesc].getColumn)
@@ -97,7 +98,37 @@ object SchemaMapping {
       }
       SchemaMapping(colMap.toMap)
     }
-    case _ if op.parentOperators.size == 1 => op.qInfo(op.parentOperators(0)).asInstanceOf[OperatorInfo].schemaMapping
+    case jOp : CommonJoinOperator[_] => {
+      val desc : JoinDesc = jOp.getConf.asInstanceOf[JoinDesc]
+      val colMap = jOp.getColumnExprMap
+      val reverseMap = desc.getReversedExprs
+      val parentSchemas = op.parents.map(_.schemaMapping)
+      var notMappable = false
+      val schColMap =  colMap.map { t =>
+        val oName = t._1
+        val colExpr = t._2
+        val iColNm = colExpr.asInstanceOf[ExprNodeColumnDesc].getColumn
+        val pIdx : Int = {
+          if ( reverseMap != null ) {
+            reverseMap(oName).toInt
+          } else {
+            // @todo fix this: for now if reverseMap not available
+            //                 assume that column is unique across inputs and pick the input that has this column
+
+            val possibleParents = parentSchemas.zipWithIndex.filter(_._1.columns.contains(iColNm))
+            if (possibleParents.isEmpty) -1 else possibleParents.head._2
+          }
+        }
+        if ( pIdx == -1) {
+          notMappable = true
+          (oName, Column(null, null))
+        } else {
+          (oName, parentSchemas(pIdx).columns(iColNm))
+        }
+      }
+      SchemaMapping(schColMap.toMap)
+    }
+    case _ if op.parents.size == 1 => op.parents(0).schemaMapping
     case _ => null
   }
 }

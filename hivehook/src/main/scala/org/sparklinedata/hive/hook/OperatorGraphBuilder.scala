@@ -121,7 +121,7 @@ object OperatorGraphBuilder  {
       val children = bldrNd.children.map(c => bldrNdToOpNode(c.id))
       val nd = bldrNd match {
         case op : OperatorBldrNode => OperatorNode(op.info, children)
-        case q : QueryBldrNode => QueryNode(q.info, children)
+        case q : QueryBldrNode => QueryNode(q.info, children, true)
       }
       bldrNdToOpNode += (bldrNd.id -> nd)
     }

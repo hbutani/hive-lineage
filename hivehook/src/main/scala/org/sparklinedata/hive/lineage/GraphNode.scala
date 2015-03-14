@@ -85,6 +85,15 @@ abstract class GraphNode {
     visitedMap += (id -> newNode)
     newNode
   }
+
+  // for debugging in java
+  def _throwNPE = {
+    try {
+      throw new NullPointerException
+    } catch {
+      case _ : NullPointerException => ()
+    }
+  }
 }
 
 trait PrintableGraphNode extends GraphNode {
