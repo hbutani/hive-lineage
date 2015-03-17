@@ -74,7 +74,8 @@ case class SchemaMapping(columns : Map[String, Column]) {
 object SchemaMapping {
   def apply(op : OperatorNode) : SchemaMapping = op.op match {
     case ts : TableScanOperator => {
-      SchemaMapping(op.rowSchema.getSignature.map { ci =>
+      SchemaMapping(op.rowSchema.getSignature./*filter( ci =>
+        !ts.getConf.getNeededColumns.contains(ci.getInternalName)).*/map { ci =>
         (ci.getInternalName, Column(ci.getTabAlias, ci.getAlias))
       }.toMap)
     }

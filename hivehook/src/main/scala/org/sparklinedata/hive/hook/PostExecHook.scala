@@ -66,7 +66,7 @@ class PostExecHook  extends ExecuteWithHookContext {
     val rule3 = new RemoveIntermediateTableScansRule
     val rule4 = new RemoveMapSideGroupByRule
 
-    opNode = opNode.transformUp(rule2.apply).asInstanceOf[PrintableGraphNode]
+    //opNode = opNode.transformUp(rule2.apply).asInstanceOf[PrintableGraphNode]
     opNode = opNode.transformUp(rule3.apply).asInstanceOf[PrintableGraphNode]
     opNode = opNode.transformUp(rule4.apply).asInstanceOf[PrintableGraphNode]
 

@@ -2,6 +2,7 @@ package org.sparklinedata.hive.lineage
 
 import java.io.Writer
 
+import org.apache.hadoop.hive.ql.plan.api.OperatorType
 import org.sparklinedata.hive.hook.qinfo.{SchemaMapping, QueryInfo, OperatorInfo}
 import org.sparklinedata.hive.lineage.transform.rules.{RemoveMapSideGroupByRule, RemoveIntermediateTableScansRule, RemoveSinkOperatorsRule, AttachHashSinkToMapJoinRule}
 
@@ -18,7 +19,13 @@ case class OperatorNode(info : OperatorInfo,
   def rowSchema = info.rowSchema
   def printNode(prefix : String, out : Writer) : Unit = {
     info.printNode(prefix, out)
-    out.write(s"$prefix schema = ${schemaMapping}\n")
+    info.op.getType match {
+      case OperatorType.JOIN => out.write(s"$prefix schema = ${schemaMapping}\n")
+      case OperatorType.MAPJOIN => out.write(s"$prefix schema = ${schemaMapping}\n")
+      case OperatorType.GROUPBY => out.write(s"$prefix schema = ${schemaMapping}\n")
+      case OperatorType.REDUCESINK => out.write(s"$prefix schema = ${schemaMapping}\n")
+      case _ => ()
+    }
   }
 
   private[lineage] var _schemaMapping : SchemaMapping = null
